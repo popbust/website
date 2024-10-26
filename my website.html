@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jasper's Website</title>
+<style>
+    body {
+        background: white;
+    }
+
+    #Whatisitabout {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        font-size: 18px;
+        color: black;
+        z-index: 1;
+    }
+
+    #text {
+        position: absolute;
+        top: 38px;
+        left: 10px;
+        font-size: 18px;
+        color: black;
+        z-index: 1;
+    }
+
+    #aboutme {
+        position: absolute;
+        top: 66px;
+        left: 10px;
+        font-size: 18px;
+        color: black;
+        z-index: 1;
+    }
+
+    .scrollable {
+        position: absolute;
+        top: 100px;
+        left: 10px;
+        width: 400px;
+        height: 200px;
+        overflow-y: scroll;
+        border: 1px solid black;
+        padding: 10px;
+        background-color: #f9f9f9;
+    }
+
+    .myButton {
+        position: absolute;
+        top: 350px;
+        left: 10px;
+        padding: 10px 20px;
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        cursor: pointer;
+    }
+
+    .Button {
+        position: absolute;
+        top: 400px;
+        left: 10px;
+        padding: 10px 20px;
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        cursor: pointer;
+    }
+
+    /* Canvas for the Parkour Game */
+    canvas {
+        position: absolute;
+        top: 100px;
+        right: 10px;
+        background-color: lightgrey;
+        border: 2px solid black;
+    }
+</style>
+</head>
+<body>
+    <div id="Whatisitabout">What is it about</div>
+    <div id="text">This is a website for fun and you can see what I am doing these days.</div>
+    <div id="aboutme">Hi! As the website says, it's my website, and my name is Jasper, a 7th grade student who likes to code.</div>
+
+    <!-- Scrollable Content -->
+    <div class="scrollable">
+        <p>Welcome to my website! Here you will find various projects that I have worked on, including coding challenges, games, and more. This section is scrollable, so feel free to explore all the content.</p>
+        <p>Project 1: Snake Game - I created a snake game where you control a snake to collect food and grow in length. Try to avoid running into walls or your own body!</p>
+        <p>Project 2: Dino Game - Inspired by the classic offline Chrome game, this project allows you to control a dinosaur to jump over obstacles.</p>
+        <p>Future Projects: I plan to create more interactive and educational games, so stay tuned!<p>
+    </div>
+
+    <a href="snake.html" class="myButton">Try a game I made before (Snake.io)</a>
+    <a href="dino.html" class="Button">Try a game I made before (Dino)</a>
+
+    <!-- Parkour Game Canvas -->
+    <canvas id="parkourCanvas" width="400" height="300"></canvas>
+
+<script>
+    const canvas = document.getElementById('parkourCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // Character (blue block) properties
+    const character = {
+        x: 50,
+        y: 500,
+        width: 20,
+        height: 20,
+        color: 'blue',
+        dx: 0,
+        dy: 0,
+        gravity: 0.5,
+        jumpPower: -10,
+        speed: 4,
+        isJumping: false,
+        isDoubleJumping: false,
+        jumpCount: 0
+    };
+
+    // Platforms
+    const platforms = [
+        { x: 30, y: 320, width: 100, height: 10 },
+        { x: 150, y: 240, width: 100, height: 10 },
+        { x: 270, y: 160, width: 100, height: 10 },
+        { x: 30, y: 80, width: 100, height: 10 }
+    ];
+
+    // Handle character movement and gravity
+    function updateCharacter() {
+        // Move left and right
+        character.x += character.dx;
+
+        // Prevent going off canvas horizontally
+        if (character.x < 0) {
+            character.x = 0;
+        } else if (character.x + character.width > canvas.width) {
+            character.x = canvas.width - character.width;
+        }
+
+        // Move vertically (jump and fall)
+        character.y += character.dy;
+
+        // Apply gravity
+        if (character.isJumping || character.isDoubleJumping) {
+            character.dy += character.gravity;
+        }
+
+        // Prevent character from falling off the bottom
+        if (character.y + character.height >= canvas.height) {
+            character.y = canvas.height - character.height;
+            character.dy = 0;
+            character.isJumping = false;
+            character.isDoubleJumping = false;
+            character.jumpCount = 0;
+        }
+
+        // Check for platform collision
+        platforms.forEach(platform => {
+            if (character.x + character.width > platform.x &&
+                character.x < platform.x + platform.width &&
+                character.y + character.height >= platform.y &&
+                character.y + character.height <= platform.y + platform.height) {
+                character.isJumping = false;
+                character.isDoubleJumping = false;
+                character.jumpCount = 0;
+                character.dy = 0;
+                character.y = platform.y - character.height;
+            }
+        });
+    }
+
+    // Handle keydown events for jumping and moving
+    document.addEventListener('keydown', (e) => {
+        if (e.key === ' ') {  // Jump / Double jump
+            if (character.jumpCount === 0) {
+                character.dy = character.jumpPower;
+                character.isJumping = true;
+                character.jumpCount++;
+            } else if (character.jumpCount === 1) {  // Double jump
+                character.dy = character.jumpPower;
+                character.isDoubleJumping = true;
+                character.jumpCount++;
+            }
+        } else if (e.key === 'a') {  // Move left
+            character.dx = -character.speed;
+        } else if (e.key === 'd') {  // Move right
+            character.dx = character.speed;
+        }
+    });
+
+    // Handle keyup events to stop moving
+    document.addEventListener('keyup', (e) => {
+        if (e.key === 'a' || e.key === 'd') {
+            character.dx = 0;  // Stop moving horizontally when keys are released
+        }
+    });
+
+    // Render the platforms
+    function drawPlatforms() {
+        ctx.fillStyle = 'black';
+        platforms.forEach(platform => {
+            ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+        });
+    }
+
+    // Render the character (blue block)
+    function drawCharacter() {
+        ctx.fillStyle = character.color;
+        ctx.fillRect(character.x, character.y, character.width, character.height);
+    }
+
+    // Game loop
+    function gameLoop() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        updateCharacter();
+        drawPlatforms();
+        drawCharacter();
+        requestAnimationFrame(gameLoop);
+    }
+
+    // Start the game loop
+    gameLoop();
+
+</script>
+</body>
+</html>

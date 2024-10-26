@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Dino Game</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        .game-container {
+            position: relative;
+            width: 100%;
+            height: 300px;
+            overflow: hidden;
+            border: 2px solid black;
+            background-color: #f7f7f7;
+        }
+
+        .ground {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 10px;
+            background-color: gray;
+        }
+
+        .dino {
+            position: absolute;
+            bottom: 10px;
+            left: 50px;
+            width: 40px;
+            height: 40px;
+            background-color: blue;
+        }
+
+        .cactus {
+            position: absolute;
+            bottom: 10px;
+            width: 0;
+            height: 0;
+            border-left: 20px solid transparent;
+            border-right: 20px solid transparent;
+            border-bottom: 40px solid red;
+        }
+
+        .game-over {
+            display: none;
+            font-size: 24px;
+            color: red;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        #restartButton {
+            display: none;
+            margin-top: 10px;
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: blue;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        #progressBar {
+            width: 100%;
+            height: 20px;
+            background-color: #e0e0e0;
+            border: 1px solid #000;
+            margin-top: 10px;
+        }
+
+        #progress {
+            width: 0;
+            height: 100%;
+            background-color: green;
+        }
+
+        #score {
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+<h1>Welcome to the New Page!</h1>
+<p>This is a new page you have navigated to.</p>
+<p>Feel free to add more content here!</p>
+<a href="my website.html" style="color: Black;">Go Back to Home</a>
+<body>
+<div class="game-container">
+    <div class="dino" id="dino"></div>
+    <div class="ground"></div>
+    <div class="game-over" id="gameOver">Game Over!</div>
+</div>
+<div id="progressBar">
+    <div id="progress"></div>
+</div>
+<div id="score">
+    <p>Distance: <span id="distance">0</span> m</p>
+    <p>High Score: <span id="highScore">0</span> m</p>
+</div>
+<button id="restartButton" onclick="restartGame()">Restart Game</button>
+
+<script>
+    const dino = document.getElementById('dino');
+    const gameOverText = document.getElementById('gameOver');
+    const gameContainer = document.querySelector('.game-container');
+    const progressBar = document.getElementById('progress');
+    const distanceText = document.getElementById('distance');
+    const highScoreText = document.getElementById('highScore');
+    const restartButton = document.getElementById('restartButton');
+    let isJumping = false;
+    let isGameOver = false;
+    let dinoPosition = 10;
+    let gravity = 2;
+    let cactusArray = [];
+    let moveSpeed = 5;
+    let progress = 0;
+    let distance = 0;
+    let highScore = 0;
+    let speedChangeDuration = 10000; // 10秒
+    let speedChanged = false;
+
+    // 生成仙人掌
+    function createCacti() {
+        if (isGameOver) return;
+
+        const cactusCount = Math.floor(Math.random() * 3) + 1; // 随机生成1到3个仙人掌
+        let cactusPosition = window.innerWidth - 100;
+
+        for (let i = 0; i < cactusCount; i++) {
+            let cactus = document.createElement('div');
+            cactus.classList.add('cactus');
+            cactus.style.left = (cactusPosition + i * 30) + 'px'; // 调整仙人掌之间的距离
+            gameContainer.appendChild(cactus);
+            cactusArray.push(cactus);
+        }
+
+        const nextCactusDelay = Math.random() * 1000 + 500; // 下一个仙人掌生成的时间间隔更短
+        setTimeout(createCacti, nextCactusDelay);
+    }
+
+    // 仙人掌移动
+    function moveCacti() {
+        const cactusInterval = setInterval(() => {
+            if (isGameOver) {
+                clearInterval(cactusInterval);
+                return;
+            }
+
+            cactusArray.forEach(cactus => {
+                let cactusPosition = parseInt(window.getComputedStyle(cactus).getPropertyValue('left'));
+
+                cactusPosition -= moveSpeed; // 仙人掌向左移动
+                cactus.style.left = cactusPosition + 'px';
+
+                if (cactusPosition < -40) {
+                    cactus.remove(); // 移除超出边界的仙人掌
+                    cactusArray = cactusArray.filter(c => c !== cactus);
+                }
+
+                // 碰撞检测
+                const dinoRect = dino.getBoundingClientRect();
+                const cactusRect = cactus.getBoundingClientRect();
+
+                // 更精确的碰撞检测
+                if (dinoRect.right > cactusRect.left + 5 && dinoRect.left < cactusRect.right - 5 
+                    && dinoRect.bottom > cactusRect.top + 20) {
+                    gameOver();
+                    clearInterval(cactusInterval);
+                }
+            });
+        }, 20);
+    }
+
+    // 处理跳跃
+    document.addEventListener('keydown', function (event) {
+        if (event.code === 'Space' && !isJumping) {
+            isJumping = true;
+            let jumpHeight = 0;
+            let jumpInterval = setInterval(() => {
+                if (jumpHeight >= 100) {
+                    clearInterval(jumpInterval);
+                    let fallInterval = setInterval(() => {
+                        if (jumpHeight <= 0) {
+                            clearInterval(fallInterval);
+                            isJumping = false;
+                        } else {
+                            jumpHeight -= gravity;
+                            dino.style.bottom = (dinoPosition + jumpHeight) + 'px';
+                        }
+                    }, 20);
+                } else {
+                    jumpHeight += 5;
+                    dino.style.bottom = (dinoPosition + jumpHeight) + 'px';
+                }
+            }, 20);
+        }
+    });
+
+    // 更新进度条
+    // 更新米数
+    function updateDistance() {
+        if (!isGameOver) {
+            distance += 1;
+            distanceText.textContent = distance;
+
+            // 更新最高纪录
+            if (distance > highScore) {
+                highScore = distance;
+                highScoreText.textContent = highScore;
+            }
+        }
+    }
+
+   
+    // 游戏结束
+    function gameOver() {
+        isGameOver = true;
+        gameOverText.style.display = 'block';
+        restartButton.style.display = 'block'; // 显示重新开始按钮
+    }
+
+    // 重新开始游戏
+    function restartGame() {
+        // 重置游戏状态，但保持最高纪录
+        isGameOver = false;
+        isJumping = false;
+        dino.style.bottom = '10px';
+        dino.style.left = '50px';
+        cactusArray.forEach(cactus => cactus.remove()); // 移除所有仙人掌
+        cactusArray = [];
+        progress = 0;
+        distance = 0;
+        moveSpeed = 5;
+        speedChanged = false;
+        gameOverText.style.display = 'none';
+        restartButton.style.display = 'none'; // 隐藏重新开始按钮
+        distanceText.textContent = distance;
+
+        // 重新开始游戏逻辑
+        createCacti();
+        moveCacti();
+        setInterval(updateProgress, 1000); // 每秒更新进度条
+        setInterval(updateDistance, 1000); // 每秒增加米数
+    }
+
+    // 启动游戏
+    createCacti();
+    moveCacti();
+    setInterval(updateProgress, 1000); // 每秒更新进度条
+    setInterval(updateDistance, 1000); // 每秒增加米数
+</script>
+
+</body>
+</html>
